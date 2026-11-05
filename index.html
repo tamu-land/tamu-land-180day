@@ -40,4 +40,13 @@ $('add').addEventListener('click',()=>{const b={property:$('property').value,sta
 $('clear').addEventListener('click',()=>{if(confirm('この端末のテストデータをすべて削除しますか？')){bookings=[];persist();$('message').textContent='削除しました。';render()}});
 $('year').addEventListener('change',render);render();
 })();
+// Supabase接続設定（準備中）
+
+const SUPABASE_CONFIG = {
+
+  url: "",
+
+  publishableKey: ""
+
+};
 </script></body></html>
