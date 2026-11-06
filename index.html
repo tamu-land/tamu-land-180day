@@ -9,10 +9,11 @@
 </head>
 <body><main>
 <h1>🏠 TAMU-LAND</h1>
-<p>民泊180日管理 <span class="pill">試用版・手動入力</span></p>
-<p class="muted">Airbnb・Booking.comとは未連携です。数字は入力した宿泊予定の参考集計であり、法令上の営業日数を確定するものではありません。</p>
+<p>民泊180日管理 <span class="pill">試用版・手動入力＋iCalファイル</span></p>
+<p class="muted">Airbnb・Booking.comとの自動同期は未対応です。数字は入力・取り込んだ宿泊予定の参考集計であり、法令上の営業日数を確定するものではありません。</p>
 <div class="card"><label for="year">集計年度（4月1日〜翌3月31日）</label><select id="year"></select><p class="muted" id="period"></p></div>
 <div class="card" id="cloud"><h2>☁️ Supabase接続確認</h2><p class="muted">まず安全にログインとデータベースの読み取りを確認します。テスト予約は引き続きこの端末内に保存され、クラウドへ自動送信されません。</p><label for="cloud-email">Supabaseに登録したメールアドレス</label><input id="cloud-email" type="email" autocomplete="email" placeholder="メールアドレス"><button id="cloud-login" type="button">ログイン用メールを送る</button><button id="cloud-check" class="secondary" type="button">接続状態を確認</button><button id="cloud-logout" class="secondary" type="button" hidden>ログアウト</button><p id="cloud-status" class="muted" role="status">接続確認待ち</p></div><div id="cards"></div>
+<div class="card" id="ical"><h2>📅 カレンダーファイルを取り込む</h2><p class="muted">Airbnb・Booking.comから取得した <strong>.icsファイル</strong> をこのiPhone内で読み込みます。外部にアップロードしません。自動同期ではありません。</p><p class="warning">予約とブロック日は自動判定できない場合があります。候補を必ず確認して、宿泊予約だけを選択してください。</p><label for="ical-property">物件</label><select id="ical-property"><option>南葛西</option><option>浦安</option></select><label for="ical-source">取得元</label><select id="ical-source"><option value="Airbnb">Airbnb</option><option value="Booking.com">Booking.com</option></select><label for="ical-file">カレンダー（.ics）を選択</label><input id="ical-file" type="file" accept=".ics,text/calendar"><div id="ical-preview" style="max-height:280px;overflow:auto"></div><button id="ical-import" type="button">チェックした予約を取り込む</button><p class="muted" id="ical-message" role="status">ファイルを選ぶと予約候補が表示されます。</p><button id="ical-export" class="secondary" type="button">端末内の予約データをバックアップ</button><p class="muted">再取り込み時は、同じ物件・同じ取得元の前回の取り込み分を置き換えます。手入力分は残ります。別サイトとの重複日は1日として計算します。保存先はこのブラウザのみです。</p></div>
 <div class="card"><h2>テスト用の宿泊予定を追加</h2><p class="muted">この端末のブラウザ内だけに保存されます。ゲスト名や非公開のiCal URLは入力しないでください。</p>
 <label for="property">物件</label><select id="property"><option>南葛西</option><option>浦安</option></select>
 <label for="start">チェックイン</label><input id="start" type="date">
@@ -67,4 +68,4 @@ check.addEventListener('click',refresh);
 logout.addEventListener('click',async()=>{await supabase.auth.signOut();await refresh()});
 supabase.auth.onAuthStateChange(()=>{setTimeout(refresh,0)});
 refresh();
-</script></body></html>
+</script><script src="ical-import.js" defer></script></body></html>
