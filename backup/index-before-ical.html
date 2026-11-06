@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TAMU-LAND｜180日管理</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif;color:#19364b;background:#f1f6fb}*{box-sizing:border-box}body{margin:0;padding:20px}main{max-width:720px;margin:auto}h1{margin:8px 0;color:#146b9c}h2{margin:0 0 12px}p{line-height:1.6}.muted{color:#617687;font-size:13px}.card{background:#fff;border-radius:16px;padding:20px;margin:16px 0;box-shadow:0 3px 14px #dce7ee}.number{font-size:34px;font-weight:800;color:#176b9b}.bar{height:12px;border-radius:9px;background:#e7edf2;overflow:hidden;margin:14px 0}.fill{height:100%;background:#1686b4}.warning{color:#a76306}.danger{color:#b12626}label{display:block;margin:12px 0 5px;font-weight:600}input,select,button{font:inherit;padding:11px;border:1px solid #c8d8e3;border-radius:9px;width:100%;background:white}button{background:#176b9b;color:white;border:0;font-weight:700;margin-top:15px}button.secondary{background:#eaf2f8;color:#175c82}button.remove{width:auto;background:#fff1f1;color:#a22;border:1px solid #eacaca;margin:0;padding:7px 10px}ul{padding:0;list-style:none}li{padding:12px 0;border-bottom:1px solid #e6edf2;display:flex;justify-content:space-between;gap:12px;align-items:center}.pill{display:inline-block;background:#fff4dc;padding:4px 8px;border-radius:6px;font-size:12px}footer{margin:20px 0 35px}
+</style>
+</head>
+<body><main>
+<h1>🏠 TAMU-LAND</h1>
+<p>民泊180日管理 <span class="pill">試用版・手動入力</span></p>
+<p class="muted">Airbnb・Booking.comとは未連携です。数字は入力した宿泊予定の参考集計であり、法令上の営業日数を確定するものではありません。</p>
+<div class="card"><label for="year">集計年度（4月1日〜翌3月31日）</label><select id="year"></select><p class="muted" id="period"></p></div>
+<div class="card" id="cloud"><h2>☁️ Supabase接続確認</h2><p class="muted">まず安全にログインとデータベースの読み取りを確認します。テスト予約は引き続きこの端末内に保存され、クラウドへ自動送信されません。</p><label for="cloud-email">Supabaseに登録したメールアドレス</label><input id="cloud-email" type="email" autocomplete="email" placeholder="メールアドレス"><button id="cloud-login" type="button">ログイン用メールを送る</button><button id="cloud-check" class="secondary" type="button">接続状態を確認</button><button id="cloud-logout" class="secondary" type="button" hidden>ログアウト</button><p id="cloud-status" class="muted" role="status">接続確認待ち</p></div><div id="cards"></div>
+<div class="card"><h2>テスト用の宿泊予定を追加</h2><p class="muted">この端末のブラウザ内だけに保存されます。ゲスト名や非公開のiCal URLは入力しないでください。</p>
+<label for="property">物件</label><select id="property"><option>南葛西</option><option>浦安</option></select>
+<label for="start">チェックイン</label><input id="start" type="date">
+<label for="end">チェックアウト（宿泊日数に含めない）</label><input id="end" type="date">
+<button id="add">宿泊予定を追加</button><p class="muted" id="message" role="status"></p>
+</div>
+<div class="card"><h2>登録した予定</h2><ul id="entries"></ul><button class="secondary" id="clear">テストデータをすべて削除</button></div>
+<footer class="muted">※同じ物件の重複する宿泊日は1日として集計します。休止・ブロック日は入力しないでください。年度や営業日の法的判断は自治体の指導に従ってください。</footer>
+</main>
+<script>
+(()=>{'use strict';
+const KEY='tamu-land-demo-v1',properties=['南葛西','浦安'];
+const $=id=>document.getElementById(id);
+function read(){try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(v)?v.filter(x=>properties.includes(x.property)&&/^\d{4}-\d{2}-\d{2}$/.test(x.start)&&/^\d{4}-\d{2}-\d{2}$/.test(x.end)):[]}catch{return []}}
+let bookings=read();
+const utc=s=>Date.parse(s+'T00:00:00Z'),day=86400000;
+function iso(t){return new Date(t).toISOString().slice(0,10)}
+function persist(){localStorage.setItem(KEY,JSON.stringify(bookings))}
+const now=new Date(),fy=now.getMonth()<3?now.getFullYear()-1:now.getFullYear();
+for(let y=fy-2;y<=fy+2;y++){const opt=document.createElement('option');opt.value=y;opt.textContent=`${y}年度`;if(y===fy)opt.selected=true;$('year').append(opt)}
+function render(){const y=Number($('year').value),from=utc(`${y}-04-01`),to=utc(`${y+1}-04-01`);$('period').textContent=`${y}年4月1日 ～ ${y+1}年3月31日`;
+$('cards').replaceChildren();for(const p of properties){const days=new Set();for(const b of bookings.filter(x=>x.property===p)){let a=Math.max(from,utc(b.start)),z=Math.min(to,utc(b.end));for(let t=a;t<z;t+=day)days.add(iso(t))}const n=days.size,remaining=Math.max(0,180-n),color=n>=180?'danger':n>=150?'warning':'';const el=document.createElement('div');el.className='card';el.innerHTML=`<h2>${p}</h2><div class="number ${color}">${n} / 180日</div><div class="bar"><div class="fill" style="width:${Math.min(100,n/180*100)}%;background:${n>=180?'#b12626':n>=150?'#db920b':'#1686b4'}"></div></div><p class="${color}">参考残日数：${remaining}日${n>=180?'（180日以上）':n>=150?'（上限に注意）':''}</p>`;$('cards').append(el)}
+$('entries').replaceChildren();if(!bookings.length){const li=document.createElement('li');li.textContent='まだ登録がありません';$('entries').append(li)}bookings.forEach((b,i)=>{const li=document.createElement('li'),span=document.createElement('span'),btn=document.createElement('button');span.textContent=`${b.property}｜${b.start} ～ ${b.end}`;btn.className='remove';btn.textContent='削除';btn.addEventListener('click',()=>{bookings.splice(i,1);persist();render()});li.append(span,btn);$('entries').append(li)})}
+$('add').addEventListener('click',()=>{const b={property:$('property').value,start:$('start').value,end:$('end').value};if(!b.start||!b.end||!Number.isFinite(utc(b.start))||!Number.isFinite(utc(b.end))||utc(b.end)<=utc(b.start)){ $('message').textContent='チェックアウトはチェックインより後の日付を選んでね。';return}if((utc(b.end)-utc(b.start))/day>365){$('message').textContent='366日以上の予約は登録できません。';return}bookings.push(b);persist();$('message').textContent='登録しました。';render()});
+$('clear').addEventListener('click',()=>{if(confirm('この端末のテストデータをすべて削除しますか？')){bookings=[];persist();$('message').textContent='削除しました。';render()}});
+$('year').addEventListener('change',render);render();
+})();
+// Supabase接続設定（準備中）
+
+const SUPABASE_CONFIG = {
+
+  url: "https://eaotwqqysvcrgrzlaeaf.supabase.co",
+
+  publishableKey: "sb_publishable_KtK1PrxcF8ABm67ruyOqmw_209tBADL"
+
+};
+window.TAMU_SUPABASE_CONFIG = SUPABASE_CONFIG;
+</script>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const cfg=window.TAMU_SUPABASE_CONFIG;
+const status=document.getElementById('cloud-status');
+const login=document.getElementById('cloud-login');
+const check=document.getElementById('cloud-check');
+const logout=document.getElementById('cloud-logout');
+const email=document.getElementById('cloud-email');
+const supabase=createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+function show(msg){status.textContent=msg}
+async function refresh(){try{const {data:{session},error}=await supabase.auth.getSession();if(error)throw error;logout.hidden=!session;if(!session){show('未ログインです。メールでログインすると接続確認ができます。');return}const results=[];for(const table of ['properties','reservations']){const {error:e}=await supabase.from(table).select('*',{head:true,count:'exact'}).limit(1);results.push(table+': '+(e?'エラー '+e.message:'読み取りOK'))}show('ログイン済み。 '+results.join(' / ')+' ※予約のクラウド保存は未実装です。')}catch(e){show('接続確認エラー: '+e.message)}}
+login.addEventListener('click',async()=>{const address=email.value.trim();if(!address||!email.validity.valid){show('正しいメールアドレスを入力してください。');return}login.disabled=true;show('メールを送信しています…');try{const {error}=await supabase.auth.signInWithOtp({email:address,options:{emailRedirectTo:location.origin+location.pathname,shouldCreateUser:false}});if(error)throw error;show('ログイン用メールを送信しました。メール内のリンクから戻ってください。')}catch(e){show('送信できませんでした: '+e.message)}finally{login.disabled=false}});
+check.addEventListener('click',refresh);
+logout.addEventListener('click',async()=>{await supabase.auth.signOut();await refresh()});
+supabase.auth.onAuthStateChange(()=>{setTimeout(refresh,0)});
+refresh();
+</script></body></html>
