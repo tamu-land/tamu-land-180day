@@ -12,7 +12,7 @@
 <p>民泊180日管理 <span class="pill">試用版・手動入力</span></p>
 <p class="muted">Airbnb・Booking.comとは未連携です。数字は入力した宿泊予定の参考集計であり、法令上の営業日数を確定するものではありません。</p>
 <div class="card"><label for="year">集計年度（4月1日〜翌3月31日）</label><select id="year"></select><p class="muted" id="period"></p></div>
-<div id="cards"></div>
+<div class="card" id="cloud"><h2>☁️ Supabase接続確認</h2><p class="muted">まず安全にログインとデータベースの読み取りを確認します。テスト予約は引き続きこの端末内に保存され、クラウドへ自動送信されません。</p><label for="cloud-email">Supabaseに登録したメールアドレス</label><input id="cloud-email" type="email" autocomplete="email" placeholder="メールアドレス"><button id="cloud-login" type="button">ログイン用メールを送る</button><button id="cloud-check" class="secondary" type="button">接続状態を確認</button><button id="cloud-logout" class="secondary" type="button" hidden>ログアウト</button><p id="cloud-status" class="muted" role="status">接続確認待ち</p></div><div id="cards"></div>
 <div class="card"><h2>テスト用の宿泊予定を追加</h2><p class="muted">この端末のブラウザ内だけに保存されます。ゲスト名や非公開のiCal URLは入力しないでください。</p>
 <label for="property">物件</label><select id="property"><option>南葛西</option><option>浦安</option></select>
 <label for="start">チェックイン</label><input id="start" type="date">
@@ -49,4 +49,22 @@ const SUPABASE_CONFIG = {
   publishableKey: "sb_publishable_KtK1PrxcF8ABm67ruyOqmw_209tBADL"
 
 };
+window.TAMU_SUPABASE_CONFIG = SUPABASE_CONFIG;
+</script>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const cfg=window.TAMU_SUPABASE_CONFIG;
+const status=document.getElementById('cloud-status');
+const login=document.getElementById('cloud-login');
+const check=document.getElementById('cloud-check');
+const logout=document.getElementById('cloud-logout');
+const email=document.getElementById('cloud-email');
+const supabase=createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+function show(msg){status.textContent=msg}
+async function refresh(){try{const {data:{session},error}=await supabase.auth.getSession();if(error)throw error;logout.hidden=!session;if(!session){show('未ログインです。メールでログインすると接続確認ができます。');return}const results=[];for(const table of ['properties','reservations']){const {error:e}=await supabase.from(table).select('*',{head:true,count:'exact'}).limit(1);results.push(table+': '+(e?'エラー '+e.message:'読み取りOK'))}show('ログイン済み。 '+results.join(' / ')+' ※予約のクラウド保存は未実装です。')}catch(e){show('接続確認エラー: '+e.message)}}
+login.addEventListener('click',async()=>{const address=email.value.trim();if(!address||!email.validity.valid){show('正しいメールアドレスを入力してください。');return}login.disabled=true;show('メールを送信しています…');try{const {error}=await supabase.auth.signInWithOtp({email:address,options:{emailRedirectTo:location.origin+location.pathname,shouldCreateUser:false}});if(error)throw error;show('ログイン用メールを送信しました。メール内のリンクから戻ってください。')}catch(e){show('送信できませんでした: '+e.message)}finally{login.disabled=false}});
+check.addEventListener('click',refresh);
+logout.addEventListener('click',async()=>{await supabase.auth.signOut();await refresh()});
+supabase.auth.onAuthStateChange(()=>{setTimeout(refresh,0)});
+refresh();
 </script></body></html>
