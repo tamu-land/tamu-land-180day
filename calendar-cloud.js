@@ -31,3 +31,32 @@ $('feed-register').addEventListener('click',async()=>{const btn=$('feed-register
 $('feed-refresh').addEventListener('click',async()=>{try{await list();msg('登録状況を更新しました。')}catch(e){msg(e.message)}});
 client.auth.onAuthStateChange((_event,session)=>{if(session)setTimeout(()=>list().catch(()=>{}),0)});
 (async()=>{const {data:{session}}=await client.auth.getSession();if(session)await list().catch(()=>{});})();
+
+async function reviewEvents(){
+ const area=$('review-list'), state=$('review-status');
+ state.textContent='予定を読み込んでいます…';area.replaceChildren();
+ const {data:{session}}=await client.auth.getSession();
+ if(!session){state.textContent='先にログインしてください。';return}
+ const {data,error}=await client.from('calendar_events').select('id,property_id,check_in,check_out,classification,reviewed').order('check_in',{ascending:true}).limit(300);
+ if(error){state.textContent='読み込みエラー：'+error.message;return}
+ const events=data||[]; const pending=events.filter(e=>!e.reviewed);
+ state.textContent='確認待ち：'+pending.length+'件（取得済み：'+events.length+'件）。予約サイトの管理画面と日付を照合してね。';
+ if(!pending.length){area.textContent='確認待ちの予定はありません。';return}
+ for(const e of pending){
+  const div=document.createElement('div');div.style.cssText='padding:12px 0;border-bottom:1px solid #e6edf2';
+  const text=document.createElement('p');text.textContent=(e.property_id===1?'南葛西':'浦安')+'｜'+e.check_in+' ～ '+e.check_out;div.append(text);
+  const select=document.createElement('select');
+  for(const [v,t] of [['unknown','未判定（変更しない）'],['booked','宿泊予約'],['blocked','ブロック・休止']]){const op=document.createElement('option');op.value=v;op.textContent=t;select.append(op)}
+  const btn=document.createElement('button');btn.type='button';btn.textContent='この予定を確定';
+  btn.addEventListener('click',async()=>{
+   if(select.value==='unknown'){state.textContent='宿泊予約かブロック日か選んでね。';return}
+   if(!confirm('この予定を「'+(select.value==='booked'?'宿泊予約':'ブロック・休止')+'」として登録しますか？'))return;
+   btn.disabled=true;
+   const {error:err}=await client.from('calendar_events').update({classification:select.value,reviewed:true}).eq('id',e.id);
+   if(err){state.textContent='更新できませんでした：'+err.message;btn.disabled=false;return}
+   await reviewEvents();
+  });
+  div.append(select,btn);area.append(div);
+ }
+}
+$('review-refresh').addEventListener('click',reviewEvents);
