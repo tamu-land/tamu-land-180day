@@ -29,7 +29,7 @@ function update(){
   return;
  }
  const y=Number($('year').value),from=utc(y+'-04-01'),to=utc((y+1)+'-04-01');
- notice.textContent='クラウドで「宿泊予約」と確定した予定のみ集計。未確認・販売停止・過去の未取得予約は含まれません。法令上の営業日数としては確定していません。'+(lastUpdated?' 最終取得：'+lastUpdated.toLocaleString('ja-JP'):'');
+ notice.textContent='確認済みの宿泊予約と、手入力した宿泊実績を重複なく集計。未確認・販売停止・未登録の過去実績は含まれません。法令上の営業日数としては未確定です。'+(lastUpdated?' 最終取得：'+lastUpdated.toLocaleString('ja-JP'):'');
  $('cards').replaceChildren();
  for(const [idString,name] of Object.entries(names)){
   const id=Number(idString),bookingDays=daySet(cloudEvents,id,from,to),verifiedDays=new Set();
@@ -43,10 +43,10 @@ function update(){
   const h=document.createElement('h2');h.textContent=name;
   const figure=document.createElement('div');figure.className='number'+(n>=180?' danger':n>=150?' warning':'');figure.textContent=n+' / 180日';
   const bar=document.createElement('div');bar.className='bar';const fill=document.createElement('div');fill.className='fill';fill.style.width=Math.min(100,n/180*100)+'%';if(n>=180)fill.style.background='#b12626';else if(n>=150)fill.style.background='#db920b';bar.append(fill);
-  const p=document.createElement('p');p.textContent='確認済み予約の参考残日数：'+Math.max(0,180-n)+'日';
+  const p=document.createElement('p');p.textContent='登録済みデータによる参考残日数：'+Math.max(0,180-n)+'日';
   const caution=document.createElement('p');caution.className='warning';caution.textContent=(missing?'未登録の予約サイトがあります。 ':'')+(stale?'最終同期が古い、または同期エラーがあります。手動同期してください。 ':'')+(pending?'未確認の予定：'+pending+'件。確認が終わるまで日数は不完全です。':'')+(warning?' '+warning:'');
   const breakdown=document.createElement('p');breakdown.className='muted';breakdown.textContent='確定予約：'+bookingDays.size+'日／実績登録：'+verifiedDays.size+'日（重複日を除く）';
-  const caveat=document.createElement('p');caveat.className='muted';caveat.textContent='同期した予約の参考値（法定営業日数ではありません）';
+  const caveat=document.createElement('p');caveat.className='muted';caveat.textContent='予約予定と申告済み実績による参考値（法定営業日数ではありません）';
   card.append(h,figure,bar,p,breakdown,caution,caveat);$('cards').append(card);
  }
 }
@@ -90,7 +90,7 @@ function renderStays(){
   });line.append(info,remove);area.append(line)}
 }
 $('actual-save').addEventListener('click',async()=>{
- const b=$('actual-start').value,e=$('actual-end').value,today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Tokyo'}).replace(/\//g,'-');
+ const b=$('actual-start').value,e=$('actual-end').value,today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  if(!b||!e||!Number.isFinite(utc(b))||!Number.isFinite(utc(e))||utc(e)<=utc(b)||utc(e)-utc(b)>366*DAY){$('actual-status').textContent='正しい宿泊日を入力してください（最大366日）。';return}
  if(e>today){$('actual-status').textContent='未来の日付は宿泊実績として登録できません。';return}
  if(!confirm(b+' ～ '+e+' は実際に宿泊があった日ですか？'))return;
