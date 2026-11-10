@@ -21,9 +21,9 @@ async function list(){
    heading.textContent=(f.property_id===1?'南葛西':f.property_id===2?'浦安':'物件'+f.property_id)+'｜'+f.source;
    const state=document.createElement('p');state.className='muted';state.textContent=f.last_error?'同期エラー（最後の同期情報は下に表示）':f.last_synced_at?'最終同期：'+new Date(f.last_synced_at).toLocaleString('ja-JP'):'未同期';
    const sync=document.createElement('button');sync.type='button';sync.textContent='今すぐ同期';
-   sync.addEventListener('click',async()=>{sync.disabled=true;msg('同期しています…');try{const d=await invoke('sync',{feed_id:f.id});msg('読み込み完了：'+d.count+'件。内容不明：'+d.needs_review+'件。確認まで法令上の日数には使わないでください。');await list()}catch(e){msg('同期できませんでした：'+e.message)}finally{sync.disabled=false}});
+   sync.addEventListener('click',async()=>{sync.disabled=true;msg('同期しています…');try{const d=await invoke('sync',{feed_id:f.id});msg('読み込み完了：'+d.count+'件。内容不明：'+d.needs_review+'件。確認まで法令上の日数には使わないでください。');await list();document.dispatchEvent(new Event('tamu-cloud-changed'))}catch(e){msg('同期できませんでした：'+e.message)}finally{sync.disabled=false}});
    const remove=document.createElement('button');remove.type='button';remove.className='secondary';remove.textContent='登録解除';
-   remove.addEventListener('click',async()=>{if(!confirm('このカレンダーURLと取り込んだデータを削除しますか？'))return;remove.disabled=true;try{await invoke('remove',{feed_id:f.id});msg('登録解除しました。');await list()}catch(e){msg('登録解除できませんでした：'+e.message)}finally{remove.disabled=false}});
+   remove.addEventListener('click',async()=>{if(!confirm('このカレンダーURLと取り込んだデータを削除しますか？'))return;remove.disabled=true;try{await invoke('remove',{feed_id:f.id});msg('登録解除しました。');await list();document.dispatchEvent(new Event('tamu-cloud-changed'))}catch(e){msg('登録解除できませんでした：'+e.message)}finally{remove.disabled=false}});
    card.append(heading,state,sync,remove);area.append(card);
  }
 }
@@ -54,7 +54,7 @@ async function reviewEvents(){
    btn.disabled=true;
    const {error:err}=await client.from('calendar_events').update({classification:select.value,reviewed:true}).eq('id',e.id);
    if(err){state.textContent='更新できませんでした：'+err.message;btn.disabled=false;return}
-   await reviewEvents();
+   await reviewEvents();document.dispatchEvent(new Event('tamu-cloud-changed'));
   });
   div.append(select,btn);area.append(div);
  }
