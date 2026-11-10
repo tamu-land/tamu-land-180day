@@ -65,8 +65,11 @@ async function refresh(){
  }
  const {data:actual,error:actualError}=await db.from('actual_stays').select('id,property_id,check_in,check_out').eq('property_id',1).order('check_in',{ascending:false}).limit(1000);
  if(actualError)throw actualError;
- const {data:feeds,error:feedError}=await db.from('calendar_feeds').select('property_id,last_synced_at,last_error');
+ // Feed URLs are private; retrieve safe status metadata through the authenticated server endpoint.
+ const {data:feedResponse,error:feedError}=await db.functions.invoke('calendar-manager',{body:{action:'list'}});
  if(feedError)throw feedError;
+ if(feedResponse?.error)throw Error(feedResponse.error);
+ const feeds=feedResponse?.feeds||[];
  cloudEvents=rows;actualStays=actual||[];feedStates=feeds||[];renderStays();loaded=true;loadError='';lastUpdated=new Date();update();
 }
 async function safeRefresh(){try{await refresh()}catch(e){loaded=false;loadError=e.message||String(e);update()}}
