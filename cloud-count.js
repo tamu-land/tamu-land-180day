@@ -46,8 +46,14 @@ function update(){
   const p=document.createElement('p');p.textContent=missingHistory?'年度開始からの記録が不足しているため、正確な残日数は未確定です。':'登録済みデータによる参考残日数：'+Math.max(0,180-n)+'日';
   const caution=document.createElement('p');caution.className='warning';caution.textContent=(missingHistory?'⚠️ 4月1日〜'+(observedStart||'現在')+'の宿泊実績が未取得です。予約サイトの過去の宿泊履歴を照合してください。 ':'')+(missing?'未登録の予約サイトがあります。 ':'')+(stale?'最終同期が古い、または同期エラーがあります。手動同期してください。 ':'')+(pending?'未確認の予定：'+pending+'件。確認が終わるまで日数は不完全です。':'')+(warning?' '+warning:'');
   const breakdown=document.createElement('p');breakdown.className='muted';breakdown.textContent='確定予約：'+bookingDays.size+'日／実績登録：'+verifiedDays.size+'日（重複日を除く）';
+  const monthly=document.createElement('p');monthly.className='muted';
+  const monthLabels=[];
+  for(let i=0;i<12;i++){const year=y+(i>=9?1:0),month=(i+3)%12+1,prefix=year+'-'+String(month).padStart(2,'0');
+    const amount=[...allDays].filter(day=>day.startsWith(prefix)).length;
+    monthLabels.push(month+'月：'+(missingHistory&&prefix<'2026-11'?'未取得（現在'+amount+'日）':amount+'日'))}
+  monthly.textContent='年度内の月別集計：'+monthLabels.join(' ／ ');
   const caveat=document.createElement('p');caveat.className='muted';caveat.textContent='確定予約の予定泊数＋手入力の実績を重複除外した参考値。未来の予約を含み、法定営業日数ではありません。';
-  card.append(h,figure,bar,p,breakdown,caution,caveat);$('cards').append(card);
+  card.append(h,figure,bar,p,breakdown,monthly,caution,caveat);$('cards').append(card);
  }
 }
 async function refresh(){
